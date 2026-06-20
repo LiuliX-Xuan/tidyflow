@@ -27,4 +27,4 @@ ENV/
 *_cleaned.xlsx
 *_cleaned.json
 quality_report.md
-comparison.gif
+examples/comparison.gif
