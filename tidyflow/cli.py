@@ -144,7 +144,7 @@ def info(input_file: str) -> None:
 
     try:
         cleaner = Cleaner(input_file)
-        df = cleaner._df
+        df = cleaner.df
 
         console.print(f"\n[bold]{input_file}[/bold]\n")
 
@@ -188,7 +188,7 @@ def detect(input_file: str, output_json: bool) -> None:
 
     try:
         cleaner = Cleaner(input_file)
-        diagnoser = Diagnoser(cleaner._df)
+        diagnoser = Diagnoser(cleaner.df)
         report = diagnoser.diagnose()
 
         if output_json:

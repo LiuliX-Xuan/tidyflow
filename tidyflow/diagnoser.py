@@ -2,9 +2,10 @@
 
 import pandas as pd
 from dataclasses import dataclass, field
+from enum import Enum
 
 
-class Severity:
+class Severity(str, Enum):
     """问题严重程度分级"""
     WARNING = "warning"
     ERROR = "error"
@@ -37,15 +38,15 @@ class DiagnosticReport:
 
     @property
     def warnings(self) -> list[Diagnostic]:
-        return [d for d in self.diagnostics if d.severity == "warning"]
+        return [d for d in self.diagnostics if d.severity == Severity.WARNING]
 
     @property
     def errors(self) -> list[Diagnostic]:
-        return [d for d in self.diagnostics if d.severity == "error"]
+        return [d for d in self.diagnostics if d.severity == Severity.ERROR]
 
     @property
     def criticals(self) -> list[Diagnostic]:
-        return [d for d in self.diagnostics if d.severity == "critical"]
+        return [d for d in self.diagnostics if d.severity == Severity.CRITICAL]
 
     def to_dict(self) -> dict[str, list[dict]]:
         return {
@@ -118,7 +119,7 @@ class Diagnoser:
 
                 if ratio > 0.5:
                     self.diagnostics.append(Diagnostic(
-                        severity="critical",
+                        severity=Severity.CRITICAL,
                         category="缺失值",
                         message=f"列 '{col}' 缺失率 {ratio:.0%} ({count} 行)",
                         suggestion="fill_missing(strategy='drop')",
@@ -127,7 +128,7 @@ class Diagnoser:
                 elif ratio > 0.1:
                     strategy = "mean" if is_numeric else "drop"
                     self.diagnostics.append(Diagnostic(
-                        severity="error",
+                        severity=Severity.ERROR,
                         category="缺失值",
                         message=f"列 '{col}' 缺失率 {ratio:.0%} ({count} 行)",
                         suggestion=f"fill_missing(strategy='{strategy}')",
@@ -135,7 +136,7 @@ class Diagnoser:
                     ))
                 elif count > 0:
                     self.diagnostics.append(Diagnostic(
-                        severity="warning",
+                        severity=Severity.WARNING,
                         category="缺失值",
                         message=f"列 '{col}' 缺失 {count} 行",
                         suggestion=f"fill_missing(strategy='drop')",
@@ -152,14 +153,14 @@ class Diagnoser:
             ratio = dup_count / len(self.df)
             if ratio > 0.1:
                 self.diagnostics.append(Diagnostic(
-                    severity="error",
+                    severity=Severity.ERROR,
                     category="重复行",
                     message=f"{dup_count} 行重复 ({ratio:.0%})",
                     suggestion="remove_duplicates()",
                 ))
             else:
                 self.diagnostics.append(Diagnostic(
-                    severity="warning",
+                    severity=Severity.WARNING,
                     category="重复行",
                     message=f"发现 {dup_count} 行重复",
                     suggestion="remove_duplicates()",
@@ -170,7 +171,7 @@ class Diagnoser:
         empty_rows = int(self.df.isnull().all(axis=1).sum())
         if empty_rows > 0:
             self.diagnostics.append(Diagnostic(
-                severity="warning",
+                severity=Severity.WARNING,
                 category="空行",
                 message=f"发现 {empty_rows} 行完全为空",
                 suggestion="drop_empty_rows()",
@@ -189,7 +190,7 @@ class Diagnoser:
             if len(messy_cols) > 3:
                 cols_str += f" 等 {len(messy_cols)} 列"
             self.diagnostics.append(Diagnostic(
-                severity="warning",
+                severity=Severity.WARNING,
                 category="列名格式",
                 message=f"列名不规范: {cols_str}",
                 suggestion="to_snake_case()",
@@ -209,7 +210,7 @@ class Diagnoser:
         if cols_with_space:
             cols_str = ", ".join([f"'{c}'" for c in cols_with_space[:3]])
             self.diagnostics.append(Diagnostic(
-                severity="warning",
+                severity=Severity.WARNING,
                 category="文本空格",
                 message=f"列含前后空格: {cols_str}",
                 suggestion="strip_text()",
@@ -225,7 +226,7 @@ class Diagnoser:
                 try:
                     pd.to_numeric(sample, errors="raise")
                     self.diagnostics.append(Diagnostic(
-                        severity="warning",
+                        severity=Severity.WARNING,
                         category="类型不匹配",
                         message=f"列 '{col}' 存为字符串但可转为数字",
                         suggestion=f"考虑转换类型: df['{col}'] = pd.to_numeric(df['{col}'])",

@@ -45,6 +45,11 @@ class Cleaner:
         self._original_df = self._df.copy()
         self._operations: list[str] = []
 
+    @property
+    def df(self) -> pd.DataFrame:
+        """获取当前DataFrame（只读）"""
+        return self._df
+
     def _read_csv_with_fallback(self, path: Path) -> pd.DataFrame:
         """读取CSV文件，自动检测编码"""
         encodings = ["utf-8", "gbk", "gb2312", "latin-1"]

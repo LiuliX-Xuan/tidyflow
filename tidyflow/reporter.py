@@ -2,25 +2,7 @@
 
 import pandas as pd
 from datetime import datetime
-from tidyflow.diagnoser import Diagnoser, Severity
-
-
-class Issue:
-    """单个数据质量问题"""
-
-    def __init__(self, severity: str, category: str, message: str, count: int) -> None:
-        self.severity = severity
-        self.category = category
-        self.message = message
-        self.count = count
-
-    def to_dict(self) -> dict[str, str | int]:
-        return {
-            "severity": self.severity,
-            "category": self.category,
-            "message": self.message,
-            "count": self.count,
-        }
+from tidyflow.diagnoser import Diagnoser, Severity, Diagnostic
 
 
 class Report:
@@ -35,31 +17,24 @@ class Report:
         self.original_df = original_df
         self.cleaned_df = cleaned_df
         self.operations = operations
-        self.issues: list[Issue] = []
+        self.diagnostics: list[Diagnostic] = []
 
-    def analyze(self) -> list[Issue]:
+    def analyze(self) -> list[Diagnostic]:
         """分析数据质量问题"""
-        self.issues = []
+        self.diagnostics = []
 
         if len(self.original_df) == 0:
-            return self.issues
+            return self.diagnostics
 
         diagnoser = Diagnoser(self.original_df)
         report = diagnoser.diagnose()
 
-        for d in report.diagnostics:
-            self.issues.append(Issue(
-                severity=d.severity,
-                category=d.category,
-                message=d.message,
-                count=1,
-            ))
-
-        return self.issues
+        self.diagnostics = report.diagnostics
+        return self.diagnostics
 
     def generate(self) -> str:
         """生成Markdown格式报告"""
-        if not self.issues:
+        if not self.diagnostics:
             self.analyze()
 
         lines: list[str] = []
@@ -74,19 +49,19 @@ class Report:
         lines.append(f"- 原始缺失值: {int(self.original_df.isnull().sum().sum())}")
         lines.append(f"- 清洗后缺失值: {int(self.cleaned_df.isnull().sum().sum())}")
 
-        critical = [i for i in self.issues if i.severity == Severity.CRITICAL]
-        error = [i for i in self.issues if i.severity == Severity.ERROR]
-        warning = [i for i in self.issues if i.severity == Severity.WARNING]
+        critical = [d for d in self.diagnostics if d.severity == Severity.CRITICAL]
+        error = [d for d in self.diagnostics if d.severity == Severity.ERROR]
+        warning = [d for d in self.diagnostics if d.severity == Severity.WARNING]
 
         lines.append(f"\n## 问题统计")
         lines.append(f"- [CRITICAL] Critical: {len(critical)} 个")
         lines.append(f"- [ERROR] Error: {len(error)} 个")
         lines.append(f"- [WARNING] Warning: {len(warning)} 个")
 
-        if self.issues:
+        if self.diagnostics:
             lines.append(f"\n## 问题详情")
-            for issue in self.issues:
-                lines.append(f"- **[{issue.severity.upper()}]** {issue.message}")
+            for diag in self.diagnostics:
+                lines.append(f"- **[{diag.severity.value.upper()}]** {diag.message}")
 
         lines.append(f"\n## 执行的操作")
         for i, op in enumerate(self.operations, 1):
